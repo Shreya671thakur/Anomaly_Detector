@@ -96,7 +96,7 @@ If frontend exists (Vite):
 
 This project can be deployed on:
 
-* Streamlit (recommended for demo)
+* Streamlit (recommended for demo) https://anomalydetector-vehynu5myzcotsmh3tzkhu.streamlit.app/
 * Vercel (frontend)
 * Render / Railway (backend)
 
