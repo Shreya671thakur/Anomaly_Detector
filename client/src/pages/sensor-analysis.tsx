@@ -72,14 +72,29 @@ export default function SensorAnalysis() {
       <div className="grid gap-6">
         <Card className="glass border-primary/20">
           <CardHeader>
-             <CardTitle className="flex items-center gap-2">
-               Live Vibration Analysis
-               {isPlaying && <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-                </span>}
-             </CardTitle>
-             <CardDescription>Monitoring Motor Unit #4A - Frequency 50Hz</CardDescription>
+             <div className="flex items-center justify-between">
+               <div className="space-y-1">
+                 <CardTitle className="flex items-center gap-2">
+                   Live Vibration Analysis (Hz)
+                   {isPlaying && <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                    </span>}
+                 </CardTitle>
+                 <CardDescription>
+                   Detecting anomalies in motor vibration frequency. 
+                   <span className="text-primary block mt-1">
+                     • Normal Range: 45-65 Hz <br/>
+                     • Threshold: &gt;65 Hz (Indicates potential bearing failure)
+                   </span>
+                 </CardDescription>
+               </div>
+               {isPlaying && (
+                 <div className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/50 rounded-full text-emerald-500 text-xs font-bold animate-pulse">
+                   MONITORING ACTIVE
+                 </div>
+               )}
+             </div>
           </CardHeader>
           <CardContent>
             <div className="h-[400px] w-full">

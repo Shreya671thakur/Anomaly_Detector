@@ -1,13 +1,54 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { mockDashboardStats, mockRecentAlerts, generateSensorData } from "@/lib/mockData";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Activity, AlertTriangle, CheckCircle2, Eye, Download, Info } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Eye, Upload, Info, FileText, Loader2, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { downloadMockDataset } from "@/lib/mockData";
 import factoryImage from "@assets/generated_images/industrial_factory_floor_schematic.png";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function Dashboard() {
   const sensorData = generateSensorData(20); // Small dataset for dashboard chart
+  const { toast } = useToast();
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setUploadedFile(file);
+      toast({
+        title: "Dataset Uploaded",
+        description: `Successfully loaded ${file.name}. Ready for analysis.`,
+      });
+    }
+  };
+
+  const handleGenerateReport = () => {
+    if (!uploadedFile) {
+      toast({
+        title: "No Dataset Found",
+        description: "Please upload a dataset first to generate a report.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    // Simulate generation delay
+    setTimeout(() => {
+      setIsGenerating(false);
+      setShowReport(true);
+      toast({
+        title: "Report Generated",
+        description: "Analysis complete based on uploaded dataset.",
+        variant: "default",
+        className: "bg-emerald-500/10 border-emerald-500 text-emerald-500"
+      });
+    }, 2000);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -16,16 +57,89 @@ export default function Dashboard() {
           <h2 className="text-3xl font-display font-bold tracking-tight text-foreground">Dashboard Overview</h2>
           <p className="text-muted-foreground mt-1">Real-time monitoring of industrial assets and anomaly detection systems.</p>
         </div>
-        <div className="flex gap-2">
-           <Button variant="outline" className="gap-2" onClick={downloadMockDataset}>
-             <Download className="h-4 w-4" />
-             Download Dataset
-           </Button>
-           <Button className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20">
+        <div className="flex gap-2 items-center">
+           <div className="relative">
+             <input 
+               type="file" 
+               id="dataset-upload" 
+               className="hidden" 
+               accept=".csv,.json,.zip"
+               onChange={handleFileUpload}
+             />
+             <Button variant="outline" className="gap-2" onClick={() => document.getElementById('dataset-upload')?.click()}>
+               <Upload className="h-4 w-4" />
+               {uploadedFile ? uploadedFile.name : "Upload Dataset"}
+             </Button>
+           </div>
+           
+           <Button 
+             onClick={handleGenerateReport}
+             disabled={isGenerating}
+             className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 gap-2"
+           >
+             {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
              Generate Report
            </Button>
         </div>
       </div>
+
+      {/* Report Dialog */}
+      <Dialog open={showReport} onOpenChange={setShowReport}>
+        <DialogContent className="max-w-3xl glass border-primary/20">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-display flex items-center gap-2">
+              <FileText className="h-6 w-6 text-primary" />
+              Industrial Analysis Report
+            </DialogTitle>
+            <DialogDescription>
+              Generated from: <span className="font-mono text-foreground">{uploadedFile?.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="p-4 rounded-lg bg-background/50 border border-border">
+                <div className="text-sm text-muted-foreground">Rows Analyzed</div>
+                <div className="text-2xl font-bold font-mono">14,205</div>
+              </div>
+              <div className="p-4 rounded-lg bg-background/50 border border-border">
+                <div className="text-sm text-muted-foreground">Anomalies Found</div>
+                <div className="text-2xl font-bold font-mono text-destructive">127</div>
+              </div>
+              <div className="p-4 rounded-lg bg-background/50 border border-border">
+                <div className="text-sm text-muted-foreground">Confidence Score</div>
+                <div className="text-2xl font-bold font-mono text-emerald-500">99.1%</div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-semibold flex items-center gap-2">
+                <Database className="h-4 w-4" /> Dataset Summary
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                The dataset contains sensor telemetry from 4 active assembly lines. 
+                Primary indicators (vibration, temperature) show stable operations with 
+                intermittent spikes correlating to the detected anomalies.
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+              <h4 className="font-semibold text-destructive flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4" /> Critical Findings
+              </h4>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>Zone 4 (Packaging) reported consistent vibration drift (+15%).</li>
+                <li>Thermal spikes detected in Motor Unit 3B at 14:00-16:00.</li>
+                <li>Visual inspection flagged 3 hairline fractures in Batch #992.</li>
+              </ul>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowReport(false)}>Close</Button>
+              <Button className="gap-2"><Upload className="h-4 w-4" /> Export PDF</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

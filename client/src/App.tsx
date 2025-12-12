@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "@/pages/dashboard";
 import ImageAnalysis from "@/pages/image-analysis";
 import SensorAnalysis from "@/pages/sensor-analysis";
+import Settings from "@/pages/settings";
 
 function Router() {
   return (
@@ -16,6 +17,7 @@ function Router() {
         <Route path="/" component={Dashboard} />
         <Route path="/image-analysis" component={ImageAnalysis} />
         <Route path="/sensor-analysis" component={SensorAnalysis} />
+        <Route path="/settings" component={Settings} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
