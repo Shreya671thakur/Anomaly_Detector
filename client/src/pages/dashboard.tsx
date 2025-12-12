@@ -1,12 +1,33 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { mockDashboardStats, mockRecentAlerts, generateSensorData } from "@/lib/mockData";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Activity, AlertTriangle, CheckCircle2, Eye, Upload, Info, FileText, Loader2, Database } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Eye, Upload, Info, FileText, Loader2, Database, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import factoryImage from "@assets/generated_images/industrial_factory_floor_schematic.png";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+// Helper to simulate analysis based on file content
+const analyzeFileContent = (file: File): Promise<{ rows: number; anomalies: number; confidence: number; summary: string }> => {
+  return new Promise((resolve) => {
+    // In a real app, this would send the file to the Python backend
+    // Here we simulate analysis based on file size/name to make it deterministic
+    setTimeout(() => {
+      const sizeFactor = file.size % 1000;
+      const rows = Math.floor(file.size / 50) + 100; // Fake row count based on size
+      const anomalies = Math.floor(sizeFactor / 10); 
+      const confidence = 95 + (sizeFactor % 50) / 10;
+      
+      resolve({
+        rows,
+        anomalies,
+        confidence,
+        summary: `Analysis of ${file.name} detected ${anomalies} anomalies across ${rows} data points. Signal integrity is stable.`
+      });
+    }, 2000);
+  });
+};
 
 export default function Dashboard() {
   const sensorData = generateSensorData(20); // Small dataset for dashboard chart
@@ -14,19 +35,21 @@ export default function Dashboard() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [reportData, setReportData] = useState<{ rows: number; anomalies: number; confidence: number; summary: string } | null>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setUploadedFile(file);
+      setReportData(null); // Reset report when new file is uploaded
       toast({
         title: "Dataset Uploaded",
-        description: `Successfully loaded ${file.name}. Ready for analysis.`,
+        description: `Successfully loaded ${file.name} (${(file.size / 1024).toFixed(2)} KB). Ready for analysis.`,
       });
     }
   };
 
-  const handleGenerateReport = () => {
+  const handleGenerateReport = async () => {
     if (!uploadedFile) {
       toast({
         title: "No Dataset Found",
@@ -37,17 +60,54 @@ export default function Dashboard() {
     }
 
     setIsGenerating(true);
-    // Simulate generation delay
-    setTimeout(() => {
+    
+    try {
+      const results = await analyzeFileContent(uploadedFile);
+      setReportData(results);
       setIsGenerating(false);
       setShowReport(true);
       toast({
         title: "Report Generated",
-        description: "Analysis complete based on uploaded dataset.",
+        description: `Analysis complete for ${uploadedFile.name}.`,
         variant: "default",
         className: "bg-emerald-500/10 border-emerald-500 text-emerald-500"
       });
-    }, 2000);
+    } catch (error) {
+      setIsGenerating(false);
+      toast({ title: "Analysis Failed", variant: "destructive" });
+    }
+  };
+
+  const handleExportReport = () => {
+    if (!reportData || !uploadedFile) return;
+    
+    const reportContent = `
+INDUSTRIAL ANOMALY DETECTION REPORT
+-----------------------------------
+File: ${uploadedFile.name}
+Date: ${new Date().toLocaleString()}
+-----------------------------------
+Rows Analyzed: ${reportData.rows}
+Anomalies Detected: ${reportData.anomalies}
+Confidence Score: ${reportData.confidence.toFixed(2)}%
+
+Summary:
+${reportData.summary}
+
+Critical Findings:
+- Vibration patterns exceeded threshold in ${(reportData.anomalies * 0.3).toFixed(0)} instances.
+- Visual defects found in batch samples: ${(reportData.anomalies * 0.1).toFixed(0)}.
+    `;
+    
+    const blob = new Blob([reportContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Report_${uploadedFile.name}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -95,49 +155,55 @@ export default function Dashboard() {
               Generated from: <span className="font-mono text-foreground">{uploadedFile?.name}</span>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="p-4 rounded-lg bg-background/50 border border-border">
-                <div className="text-sm text-muted-foreground">Rows Analyzed</div>
-                <div className="text-2xl font-bold font-mono">14,205</div>
+          
+          {reportData && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-background/50 border border-border">
+                  <div className="text-sm text-muted-foreground">Rows Analyzed</div>
+                  <div className="text-2xl font-bold font-mono">{reportData.rows.toLocaleString()}</div>
+                </div>
+                <div className="p-4 rounded-lg bg-background/50 border border-border">
+                  <div className="text-sm text-muted-foreground">Anomalies Found</div>
+                  <div className={`text-2xl font-bold font-mono ${reportData.anomalies > 0 ? 'text-destructive' : 'text-emerald-500'}`}>
+                    {reportData.anomalies}
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg bg-background/50 border border-border">
+                  <div className="text-sm text-muted-foreground">Confidence Score</div>
+                  <div className="text-2xl font-bold font-mono text-emerald-500">{reportData.confidence.toFixed(1)}%</div>
+                </div>
               </div>
-              <div className="p-4 rounded-lg bg-background/50 border border-border">
-                <div className="text-sm text-muted-foreground">Anomalies Found</div>
-                <div className="text-2xl font-bold font-mono text-destructive">127</div>
+              
+              <div className="space-y-2">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <Database className="h-4 w-4" /> Dataset Summary
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  {reportData.summary}
+                </p>
               </div>
-              <div className="p-4 rounded-lg bg-background/50 border border-border">
-                <div className="text-sm text-muted-foreground">Confidence Score</div>
-                <div className="text-2xl font-bold font-mono text-emerald-500">99.1%</div>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <h4 className="font-semibold flex items-center gap-2">
-                <Database className="h-4 w-4" /> Dataset Summary
-              </h4>
-              <p className="text-sm text-muted-foreground">
-                The dataset contains sensor telemetry from 4 active assembly lines. 
-                Primary indicators (vibration, temperature) show stable operations with 
-                intermittent spikes correlating to the detected anomalies.
-              </p>
-            </div>
 
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
-              <h4 className="font-semibold text-destructive flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-4 w-4" /> Critical Findings
-              </h4>
-              <ul className="list-disc list-inside text-sm space-y-1">
-                <li>Zone 4 (Packaging) reported consistent vibration drift (+15%).</li>
-                <li>Thermal spikes detected in Motor Unit 3B at 14:00-16:00.</li>
-                <li>Visual inspection flagged 3 hairline fractures in Batch #992.</li>
-              </ul>
-            </div>
+              {reportData.anomalies > 0 && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+                  <h4 className="font-semibold text-destructive flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-4 w-4" /> Critical Findings
+                  </h4>
+                  <ul className="list-disc list-inside text-sm space-y-1">
+                    <li>Vibration patterns exceeded threshold in {(reportData.anomalies * 0.3).toFixed(0)} instances.</li>
+                    <li>Visual defects found in batch samples: {(reportData.anomalies * 0.1).toFixed(0)}.</li>
+                  </ul>
+                </div>
+              )}
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowReport(false)}>Close</Button>
-              <Button className="gap-2"><Upload className="h-4 w-4" /> Export PDF</Button>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowReport(false)}>Close</Button>
+                <Button className="gap-2" onClick={handleExportReport}>
+                  <Download className="h-4 w-4" /> Export Results
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
 

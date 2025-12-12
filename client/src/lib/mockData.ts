@@ -53,6 +53,27 @@ export const mockRecentAlerts = [
   { id: 3, type: "System", message: "Latency spike in Data Stream", time: "1 hour ago", severity: "low" },
 ];
 
+// Helper to download dynamic data
+export const downloadDataAsCSV = (data: any[], filename: string) => {
+  if (!data || data.length === 0) return;
+  
+  // Get headers from first object
+  const headers = Object.keys(data[0]).join(",") + "\n";
+  
+  // Convert rows
+  const rows = data.map(obj => Object.values(obj).join(",")).join("\n");
+  
+  const blob = new Blob([headers + rows], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
 export const downloadMockDataset = () => {
   // Create a CSV string
   const headers = "timestamp,sensor_id,vibration,temperature,pressure,label\n";

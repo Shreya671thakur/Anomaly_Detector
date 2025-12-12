@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Play, Pause, RotateCcw, Download } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
-import { generateSensorData, SensorDataPoint } from "@/lib/mockData";
-import { downloadMockDataset } from "@/lib/mockData";
+import { generateSensorData, SensorDataPoint, downloadDataAsCSV } from "@/lib/mockData";
 
 export default function SensorAnalysis() {
   const [data, setData] = useState<SensorDataPoint[]>([]);
@@ -46,6 +45,10 @@ export default function SensorAnalysis() {
     return () => clearInterval(interval);
   }, [isPlaying]);
 
+  const handleExportData = () => {
+    downloadDataAsCSV(data, `sensor_telemetry_live_${new Date().toISOString()}.csv`);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -54,9 +57,9 @@ export default function SensorAnalysis() {
           <p className="text-muted-foreground">LSTM-based time-series forecasting and anomaly detection.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={downloadMockDataset} className="gap-2">
+          <Button variant="outline" onClick={handleExportData} className="gap-2">
             <Download className="h-4 w-4" />
-            Export Data
+            Export Live Data
           </Button>
           <Button 
              variant={isPlaying ? "destructive" : "default"} 
